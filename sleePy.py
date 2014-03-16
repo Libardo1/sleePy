@@ -50,29 +50,36 @@ if last_sync > last_record:
         # find first diff between steps
         last_steps = user_sleep['steps'][last_sleep_row + 1]
         last_time = user_sleep['time'][last_sleep_row + 1]
+        sleep_start_time = 0
+        isSleep = 0
         for row in user_sleep.itertuples():
             if row[0] > last_sleep_row + 1:
                 if row[2] - last_steps != 0:
+                    isSleep = 0
+                    sleep_start_time = 0
                     last_sleep_row = row[0]
                     last_steps = user_sleep['steps'][last_sleep_row]
                     last_time = user_sleep['time'][last_sleep_row]
                 # sleeping
-                if not row[2] - last_steps and row[1] - last_time > T2:
+                if not row[2] - last_steps and row[1] - last_time > 7200:
+                    if not isSleep:
+                        isSleep = 1
+                        sleep_start_time = row[1]
                     for r in range(last_sleep_row, row[0] + 1):
                         user_sleep['sleep'][r] = 1
-                        last_sleep_time = r[1]
+                        last_time = user_sleep['time'][r]
                     checker = 0
                     for i, sleep in enumerate(sleep_added):
-                        if sleep[0] == row[1]:
+                        if sleep[0] == sleep_start_time:
                             checker = 1
-                            sleep_added[i][1] = r[1]
+                            sleep_added[i][1] = last_time
                     if not checker:
-                        sleep_added.append([row[1], r[1]])
+                        sleep_added.append([sleep_start_time, last_time])
 
 if sleep_added:
     for sleep in sleep_added:
         start_time = datetime.datetime.fromtimestamp(sleep[0])
         duration = int((sleep[1] - sleep[0]) * 1000)
-        fb_auth.log_sleep(start_time, duration)
+        res = fb_auth.log_sleep(start_time, duration)
 
 user_sleep.to_csv('user_sleep.csv', index=False)
